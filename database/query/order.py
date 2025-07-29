@@ -1,4 +1,4 @@
-from sqlalchemy import select, func, desc, insert, delete
+from sqlalchemy import select, func, desc, delete
 from database.util.commitchecker import commit_checker
 from database.model.tables import User, Store, Order, OrderItem, Item, session
 from datetime import datetime
@@ -20,10 +20,6 @@ def get_list(page, pagesize):
         all_list = [{'Id':row.Id, 'OrderAt':row.OrderAt, 'StoreName':row.StoreName, 'StoreId':row.StoreId,
                     'UserId':row.UserId, 'UserName':row.UserName} for row in query]
 
-        # for row in query:
-        #     all_list.append({'Id':row.Id, 'OrderAt':row.OrderAt, 'StoreName':row.StoreName, 'StoreId':row.StoreId,
-        #                      'UserId':row.UserId, 'UserName':row.UserName})
-    
     return {'data':all_list, 'totalCount':row_count}
 
 def get_list_by_storename_month(storename, month, page, pagesize):
@@ -46,10 +42,6 @@ def get_list_by_storename_month(storename, month, page, pagesize):
                              .offset(off_start)).fetchall()
         all_list = [{'Id':row.Id, 'OrderAt':row.OrderAt, 'StoreName':row.StoreName, 'StoreId':row.StoreId,
                     'UserId':row.UserId, 'UserName':row.UserName} for row in query]
-
-        # for row in query:
-        #     all_list.append({'Id':row.Id, 'OrderAt':row.OrderAt, 'StoreName':row.StoreName, 'StoreId':row.StoreId,
-        #                      'UserId':row.UserId, 'UserName':row.UserName})
     
     return {'data':all_list, 'totalCount':row_count}
 
@@ -73,10 +65,6 @@ def get_list_by_storename(storename, page, pagesize):
                              .offset(off_start)).fetchall()
         all_list = [{'Id':row.Id, 'OrderAt':row.OrderAt, 'StoreName':row.StoreName, 'StoreId':row.StoreId,
                     'UserId':row.UserId, 'UserName':row.UserName} for row in query]
-
-        # for row in query:
-        #     all_list.append({'Id':row.Id, 'OrderAt':row.OrderAt, 'StoreName':row.StoreName, 'StoreId':row.StoreId,
-        #                      'UserId':row.UserId, 'UserName':row.UserName})
         
         return {'data':all_list, 'totalCount':row_count}
 
@@ -141,25 +129,24 @@ def get_orderitems(orderid):
                              .order_by(desc('UnitCount'))).fetchall()
         all_list = [{'ItemId':row.Id, 'ItemName':row.Name, 'UnitPrice':row.UnitPrice, 'UnitCount':row.UnitCount}
                     for row in query]
-
-        # for row in query:
-        #     all_list.append({'ItemId':row.Id, 'ItemName':row.Name, 'UnitPrice':row.UnitPrice, 'UnitCount':row.UnitCount})
     
     return all_list
 
 def create_order(orderat, userid, storeid, itemid):
     with session() as sess:
         new_order_key = str(uuid.uuid4())
-        sess.execute(insert(Order).values(Id=new_order_key,
-                                          OrderAt=datetime.strptime(orderat, '%Y-%m-%d %H:%M:%S'),
-                                          UserId=userid,
-                                          StoreId=storeid))
+        new_order = Order(Id=new_order_key,
+                          OrderAt=datetime.strptime(orderat, '%Y-%m-%d %H:%M:%S'),
+                          UserId=userid,
+                          StoreId=storeid)
+        sess.add(new_order)
         sess.commit()
     
     with session() as sess:
         for i in itemid:
             new_orderitem_key = str(uuid.uuid4())
-            sess.execute(insert(OrderItem).values(Id=new_orderitem_key, OrderId=new_order_key, ItemId=i))
+            new_orderitem = OrderItem(Id=new_orderitem_key, OrderId=new_order_key, ItemId=i)
+            sess.add(new_orderitem)
         sess.commit()
 
     return {'isCreated': commit_checker('create', Order, new_order_key), 'newId': new_order_key}

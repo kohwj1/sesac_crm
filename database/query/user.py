@@ -1,4 +1,4 @@
-from sqlalchemy import select, func, desc, insert
+from sqlalchemy import select, func, desc, and_
 from database.util.commitchecker import commit_checker
 from database.model.tables import User, Store, Order, OrderItem, Item, session
 import uuid
@@ -17,6 +17,21 @@ def get_list(page, pagesize):
     
     return {'data':all_list, 'totalCount':row_count}
 
+def search_users(whereclause, page, pagesize):
+    off_start = (page - 1) * pagesize
+
+    with session() as sess:
+        row_count = sess.execute(select(func.count(User.Id))
+                                 .where(and_(whereclause))).fetchone()[0]
+        query = sess.execute(select(User)
+                             .where(and_(whereclause))
+                             .limit(pagesize)
+                             .offset(off_start)).fetchall()
+        all_list = [{'Id':row[0].Id, 'Name':row[0].Name, 'Gender':row[0].Gender,
+                    'Age':row[0].Age, 'Birthdate':row[0].Birthdate, 'Address':row[0].Address} for row in query]
+    
+    return {'data':all_list, 'totalCount':row_count}
+
 def search_users_by_name(name, page, pagesize):
     off_start = (page - 1) * pagesize
     with session() as sess:
@@ -28,11 +43,6 @@ def search_users_by_name(name, page, pagesize):
                              .offset(off_start)).fetchall()
         all_list = [{'Id':row[0].Id, 'Name':row[0].Name, 'Gender':row[0].Gender,
                     'Age':row[0].Age, 'Birthdate':row[0].Birthdate, 'Address':row[0].Address} for row in query]
-
-        # for u in query:
-        #     row = u[0]
-        #     all_list.append({'Id':row.Id, 'Name':row.Name, 'Gender':row.Gender,
-        #                      'Age':row.Age, 'Birthdate':row.Birthdate, 'Address':row.Address})
     
     return {'data':all_list, 'totalCount':row_count}
 
@@ -46,11 +56,6 @@ def search_users_by_gender(gender, page, pagesize):
                              .offset(off_start)).fetchall()
         all_list = [{'Id':row[0].Id, 'Name':row[0].Name, 'Gender':row[0].Gender, 
                     'Age':row[0].Age, 'Birthdate':row[0].Birthdate, 'Address':row[0].Address} for row in query]
-
-        # for u in query:
-        #     row = u[0]
-        #     all_list.append({'Id':row.Id, 'Name':row.Name, 'Gender':row.Gender, 
-        #                      'Age':row.Age, 'Birthdate':row.Birthdate, 'Address':row.Address})
     
     return {'data':all_list, 'totalCount':row_count}
 
@@ -65,10 +70,6 @@ def search_users_by_name_and_gender(name, gender, page, pagesize):
         all_list = [{'Id':row[0].Id, 'Name':row[0].Name, 'Gender':row[0].Gender,
                     'Age':row[0].Age, 'Birthdate':row[0].Birthdate, 'Address':row[0].Address}
                     for row in query]
-        # for u in query:
-        #     row = u[0]
-        #     all_list.append({'Id':row.Id, 'Name':row.Name, 'Gender':row.Gender,
-        #                      'Age':row.Age, 'Birthdate':row.Birthdate, 'Address':row.Address})
     
     return {'data':all_list, 'totalCount':row_count}
 
@@ -88,9 +89,6 @@ def get_user_history(userid):
                              .order_by(desc(Order.OrderAt))).fetchall()
         all_list = [{'OrderId':row[0], 'OrderAt':row[1].strftime('%Y-%m-%d %H:%M:%S'),
                     'StoreId':row[2], 'StoreName':row[3]} for row in query]
-        # for row in query:
-        #     all_list.append({'OrderId':row[0], 'OrderAt':row[1].strftime('%Y-%m-%d %H:%M:%S'),
-        #                      'StoreId':row[2], 'StoreName':row[3]})
 
     return all_list
 
@@ -104,8 +102,6 @@ def get_regular_store(userid):
                              .order_by(desc("OrderCount"))
                              .limit(5)).fetchall()
         all_list = [{'StoreName':row[0], 'OrderCount':row[1]} for row in query]
-        # for row in query:
-        #     all_list.append({'StoreName':row[0], 'OrderCount':row[1]})
     
     return all_list
 
@@ -121,20 +117,18 @@ def get_favorite_items(userid):
                              .order_by(desc("ItemCount"))
                              .limit(5)).fetchall()
         all_list = [{'ItemName':row[0], 'OrderCount':row[1]} for row in query]
-        # for row in query:
-        #     all_list.append({'ItemName':row[0], 'OrderCount':row[1]})
     
     return all_list
 
 def create_user(username, birthdate, age, gender, address):
     with session() as sess:
         new_user_key = str(uuid.uuid4())
-        sess.execute(insert(User).values(Id=new_user_key,
-                                         Name=username,
-                                         Birthdate=birthdate,
-                                         Age=age,
-                                         Gender=gender,
-                                         Address=address))
+        new_user = User(Id=new_user_key,
+                        Name=username,
+                        Birthdate=birthdate,
+                        Age=age,
+                        Address=address)
+        sess.add(new_user)
         sess.commit()
 
     return {'isCreated':commit_checker('create', User, new_user_key), 'newId': new_user_key}

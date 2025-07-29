@@ -25,7 +25,7 @@ function getUniqueStoreList() {
         .then((response) => response.json())
         .then((data) => {
             const store_data = data.data;
-            const storeList = document.getElementById('StoreId')
+            const storeList = document.getElementById('storeid')
             if (store_data.length == 0) {
                 storeList.innerText = '매장 정보를 가져오는 데 실패하였습니다.'
             } else {

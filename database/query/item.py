@@ -1,4 +1,4 @@
-from sqlalchemy import select, func, desc, insert
+from sqlalchemy import select, func, desc
 from database.model.tables import User, Store, Order, OrderItem, Item, session
 from database.util.commitchecker import commit_checker
 import uuid
@@ -61,10 +61,12 @@ def get_item_type():
 def create_item(itemname, type, unitprice):
     with session() as sess:
         new_item_key = str(uuid.uuid4())
-        sess.execute(insert(Item).values(Id=new_item_key,
-                                         Name=itemname,
-                                         Type=type,
-                                         UnitPrice=unitprice))
+        new_item = Item(Id=new_item_key,
+                        Name=itemname,
+                        Type=type,
+                        UnitPrice=unitprice)
+
+        sess.add(new_item)
         sess.commit()
 
     return {'isCreated':commit_checker('create', Item, new_item_key), 'newId':new_item_key}

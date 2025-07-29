@@ -138,10 +138,11 @@ def get_list_unique():
 def create_store(storename, type, address):
     with session() as sess:
         new_store_key = str(uuid.uuid4())
-        sess.execute(insert(Store).values(Id=new_store_key,
-                                          Name=storename,
-                                          Type=type,
-                                          Address=address))
+        new_store = Store(Id=new_store_key,
+                          Name=storename,
+                          Type=type,
+                          Address=address)
+        sess.add(new_store)
         sess.commit()
 
     return {'isCreated': commit_checker('create', Store, new_store_key), 'newId': new_store_key}
